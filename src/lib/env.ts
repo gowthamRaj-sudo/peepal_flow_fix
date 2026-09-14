@@ -14,6 +14,7 @@ const schema = z.object({
   STORAGE_LOCAL_DIR: z.string().default("./.data/uploads"),
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().optional(),
+  S3_ENDPOINT: z.string().optional(),
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   WHATSAPP_API_URL: z.string().optional().or(z.literal("")),
