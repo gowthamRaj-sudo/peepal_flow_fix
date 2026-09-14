@@ -15,7 +15,7 @@ import {
 import { breadcrumbJsonLd, faqJsonLd, JsonLd } from "@/components/site/json-ld";
 import { BUSINESS, SITE_URL } from "@/config/business";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export function generateStaticParams() {
   return [];

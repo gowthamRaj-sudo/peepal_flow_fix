@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 async function latestProjects() {
   try {

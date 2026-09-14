@@ -7,7 +7,7 @@ import { RequestServiceButton } from "@/components/site/cta";
 import { breadcrumbJsonLd, JsonLd } from "@/components/site/json-ld";
 import { SITE_URL } from "@/config/business";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Service Areas — Chennai & OMR Corridor",

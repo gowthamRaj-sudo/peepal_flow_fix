@@ -5,7 +5,7 @@ import { PageHero } from "@/components/site/page-parts";
 import { RequestServiceButton } from "@/components/site/cta";
 import { publicFileUrl } from "@/server/public-files";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Our Work — Real Projects Around Chennai",
