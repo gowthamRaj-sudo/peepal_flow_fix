@@ -17,7 +17,7 @@ import {
 import { JsonLd, breadcrumbJsonLd, faqJsonLd } from "@/components/site/json-ld";
 import { BUSINESS, SITE_URL } from "@/config/business";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export function generateStaticParams() {
   return SERVICES_CONTENT.map((s) => ({ slug: s.slug }));

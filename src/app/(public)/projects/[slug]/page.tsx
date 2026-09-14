@@ -7,7 +7,7 @@ import { breadcrumbJsonLd, JsonLd } from "@/components/site/json-ld";
 import { BUSINESS, SITE_URL } from "@/config/business";
 import { publicFileUrl } from "@/server/public-files";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 async function getProject(slug: string) {
   const project = await prisma.portfolioProject.findUnique({

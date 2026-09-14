@@ -4,7 +4,7 @@ import { SERVICES_CONTENT } from "@/config/services.data";
 import { getActiveAreas } from "@/server/catalog";
 import { prisma } from "@/lib/prisma";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
