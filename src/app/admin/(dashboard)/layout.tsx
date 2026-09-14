@@ -6,6 +6,7 @@ import {
   Briefcase,
   ClipboardList,
   FolderKanban,
+  Image,
   LayoutDashboard,
   MessageSquareText,
   Settings,
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/admin/jobs", label: "Jobs", icon: Briefcase, roles: ["ADMIN", "STAFF"] },
   { href: "/admin/quotes", label: "Quotes", icon: FolderKanban, roles: ["ADMIN", "STAFF"] },
   { href: "/admin/analytics", label: "Marketing", icon: BarChart3, roles: ["ADMIN", "STAFF"] },
+  { href: "/admin/projects", label: "Projects", icon: Image, roles: ["ADMIN", "STAFF"] },
   { href: "/admin/settings", label: "Settings", icon: Settings, roles: ["ADMIN"] },
   { href: "/admin/templates", label: "Templates", icon: MessageSquareText, roles: ["ADMIN"] },
 ] as const;
