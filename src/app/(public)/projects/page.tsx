@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { PageHero } from "@/components/site/page-parts";
 import { RequestServiceButton } from "@/components/site/cta";
+import { publicFileUrl } from "@/server/public-files";
 
 export const revalidate = 3600;
 
@@ -47,10 +48,10 @@ export default async function ProjectsPage() {
               <li key={project.id}>
                 <Link href={`/projects/${project.slug}`} className="group block h-full rounded-xl border border-slate-200 bg-white shadow-card transition hover:border-brand-300">
                   <div className="aspect-video overflow-hidden rounded-t-xl bg-slate-100">
-                    {project.photos.find((p) => p.stage === "AFTER") ? (
+                    {project.coverUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={`/api/files/${encodeURIComponent(project.photos.find((p) => p.stage === "AFTER")!.storageKey)}`}
+                        src={project.coverUrl}
                         alt={`${project.title} after completion`}
                         loading="lazy"
                         className="h-full w-full object-cover"
@@ -78,7 +79,7 @@ export default async function ProjectsPage() {
 
 async function fetchProjects() {
   const { prisma } = await import("@/lib/prisma");
-  return prisma.portfolioProject.findMany({
+  const projects = await prisma.portfolioProject.findMany({
     where: { isPublished: true },
     orderBy: [{ completedOn: "desc" }, { createdAt: "desc" }],
     include: {
@@ -87,4 +88,11 @@ async function fetchProjects() {
       photos: { orderBy: { sortOrder: "asc" } },
     },
   });
+  return Promise.all(
+    projects.map(async (project) => {
+      const cover = project.photos.find((p) => p.stage === "AFTER") ?? project.photos[0];
+      const coverUrl = cover ? await publicFileUrl(cover.storageKey) : undefined;
+      return { ...project, coverUrl };
+    }),
+  );
 }

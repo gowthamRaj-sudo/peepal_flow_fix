@@ -5,11 +5,12 @@ import { Breadcrumbs, PageHero } from "@/components/site/page-parts";
 import { RequestServiceButton, WhatsAppButton } from "@/components/site/cta";
 import { breadcrumbJsonLd, JsonLd } from "@/components/site/json-ld";
 import { BUSINESS, SITE_URL } from "@/config/business";
+import { publicFileUrl } from "@/server/public-files";
 
 export const revalidate = 3600;
 
 async function getProject(slug: string) {
-  return prisma.portfolioProject.findUnique({
+  const project = await prisma.portfolioProject.findUnique({
     where: { slug },
     include: {
       service: { select: { name: true, slug: true } },
@@ -17,6 +18,17 @@ async function getProject(slug: string) {
       photos: { orderBy: [{ stage: "asc" as const }, { sortOrder: "asc" as const }] },
     },
   });
+  if (!project) return null;
+  const photos = await Promise.all(
+    project.photos.map(async (photo) => ({
+      id: photo.id,
+      stage: photo.stage,
+      sortOrder: photo.sortOrder,
+      caption: photo.caption,
+      url: await publicFileUrl(photo.storageKey),
+    })),
+  );
+  return { ...project, photos };
 }
 
 export async function generateMetadata({
@@ -96,7 +108,7 @@ export default async function ProjectPage({
                 <li key={photo.id}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/api/files/${encodeURIComponent(photo.storageKey)}`}
+                    src={photo.url}
                     alt={`${project.title} — ${photo.caption ?? stage.label.toLowerCase()}`}
                     loading="lazy"
                     className="w-full rounded-xl object-cover shadow-card"
