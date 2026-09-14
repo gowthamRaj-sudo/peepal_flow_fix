@@ -1,0 +1,551 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+  FIELD_WORKER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  VISIT_SCHEDULED
+  QUOTATION_SENT
+  CUSTOMER_APPROVED
+  JOB_SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  LOST
+}
+
+enum LeadSource {
+  GOOGLE_BUSINESS
+  ORGANIC_SEARCH
+  WEBSITE
+  WHATSAPP
+  PHONE
+  INSTAGRAM
+  FACEBOOK
+  REFERRAL
+  DIRECT
+  OTHER
+}
+
+enum PreferredTime {
+  MORNING
+  AFTERNOON
+  EVENING
+  FLEXIBLE
+}
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PhotoStage {
+  BEFORE
+  DURING
+  AFTER
+}
+
+enum UploadKind {
+  LEAD_PHOTO
+  JOB_BEFORE
+  JOB_AFTER
+  QUOTE_PDF
+  PORTFOLIO
+  OTHER
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum QuoteItemKind {
+  MATERIALS
+  LABOUR
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CARD
+  CHEQUE
+  OTHER
+}
+
+enum ReviewRequestStatus {
+  PENDING
+  SENT
+  CLICKED
+  COMPLETED
+  SKIPPED
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  phone        String   @unique
+  passwordHash String
+  role         UserRole @default(FIELD_WORKER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedLeads       Lead[]         @relation("LeadAssignee")
+  assignedJobs        Job[]          @relation("JobAssignee")
+  leadNotes           LeadNote[]
+  jobPhotos           JobPhoto[]
+  uploads             Upload[]
+  auditLogs           AuditLog[]
+  notificationsQueued Notification[] @relation("NotificationActor")
+
+  @@index([role])
+}
+
+model Customer {
+  id        String     @id @default(cuid())
+  name      String
+  phone     String
+  whatsapp  String?
+  email     String?
+  address   String?
+  areaId    String?
+  pincode   String?
+  source    LeadSource @default(WEBSITE)
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  area           ServiceArea?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  leads          Lead[]
+  jobs           Job[]
+  quotes         Quote[]
+  payments       Payment[]
+  reviewRequests ReviewRequest[]
+
+  @@unique([phone])
+  @@index([areaId])
+  @@index([name])
+  @@index([createdAt])
+}
+
+model ServiceArea {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  district  String   @default("Chennai")
+  context   String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  customers Customer[]
+  leads     Lead[]
+  jobs      Job[]
+  services  AreaService[]
+  projects  PortfolioProject[]
+  campaigns Campaign[]
+
+  @@index([isActive])
+}
+
+model Service {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  tagline     String?
+  description String?
+  priceMin    Int?
+  priceMax    Int?
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  areas     AreaService[]
+  leads     Lead[]
+  jobs      Job[]
+  quotes    Quote[]
+  projects  PortfolioProject[]
+  campaigns Campaign[]
+
+  @@index([isActive])
+}
+
+model AreaService {
+  areaId    String
+  serviceId String
+
+  area    ServiceArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  service Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([areaId, serviceId])
+}
+
+model Lead {
+  id               String        @id @default(cuid())
+  code             String        @unique
+  status           LeadStatus    @default(NEW)
+  serviceId        String
+  areaId           String?
+  customerName     String
+  phone            String
+  whatsapp         String?
+  email            String?
+  address          String?
+  pincode          String?
+  description      String?
+  preferredTime    PreferredTime @default(FLEXIBLE)
+  source           LeadSource    @default(WEBSITE)
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  landingPage      String?
+  consent          Boolean       @default(false)
+  visitAt          DateTime?
+  firstContactedAt DateTime?
+  customerId       String?
+  assignedToId     String?
+  internalNotes    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  service    Service      @relation(fields: [serviceId], references: [id])
+  area       ServiceArea? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  customer   Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedTo User?        @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  uploads    Upload[]
+  notes      LeadNote[]
+  jobs       Job[]
+  quotes     Quote[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([phone])
+  @@index([areaId])
+  @@index([assignedToId])
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  leadId    String
+  authorId  String?
+  body      String
+  createdAt DateTime @default(now())
+
+  lead   Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+}
+
+model Job {
+  id           String    @id @default(cuid())
+  code         String    @unique
+  status       JobStatus @default(SCHEDULED)
+  customerId   String
+  leadId       String?
+  serviceId    String
+  areaId       String?
+  assignedToId String?
+  title        String
+  address      String?
+  scheduledFor DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  notes        String?
+  amount       Decimal?  @db.Decimal(12, 2)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  lead          Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  service       Service        @relation(fields: [serviceId], references: [id])
+  area          ServiceArea?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  assignedTo    User?          @relation("JobAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  photos        JobPhoto[]
+  quotes        Quote[]
+  payments      Payment[]
+  reviewRequest ReviewRequest?
+
+  @@index([status])
+  @@index([scheduledFor])
+  @@index([assignedToId])
+  @@index([customerId])
+}
+
+model JobPhoto {
+  id           String     @id @default(cuid())
+  jobId        String
+  stage        PhotoStage
+  storageKey   String
+  mimeType     String
+  sizeBytes    Int
+  caption      String?
+  takenAt      DateTime   @default(now())
+  uploadedById String?
+  createdAt    DateTime   @default(now())
+
+  job        Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([jobId])
+  @@index([stage])
+}
+
+model Upload {
+  id           String     @id @default(cuid())
+  key          String     @unique
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  kind         UploadKind @default(LEAD_PHOTO)
+  leadId       String?
+  uploadedById String?
+  createdAt    DateTime   @default(now())
+
+  lead       Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+}
+
+model Quote {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  publicToken     String      @unique
+  status          QuoteStatus @default(DRAFT)
+  customerId      String
+  leadId          String?
+  jobId           String?
+  serviceId       String?
+  workDescription String?
+  materialsNote   String?
+  subtotal        Decimal     @db.Decimal(12, 2)
+  discount        Decimal     @default(0) @db.Decimal(12, 2)
+  taxPercent      Decimal     @default(0) @db.Decimal(5, 2)
+  taxAmount       Decimal     @default(0) @db.Decimal(12, 2)
+  total           Decimal     @db.Decimal(12, 2)
+  notes           String?
+  paymentTerms    String?
+  validUntil      DateTime?
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  pdfKey          String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  customer Customer    @relation(fields: [customerId], references: [id])
+  lead     Lead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  job      Job?        @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  service  Service?    @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  items    QuoteItem[]
+
+  @@index([status])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model QuoteItem {
+  id          String        @id @default(cuid())
+  quoteId     String
+  kind        QuoteItemKind @default(MATERIALS)
+  description String
+  quantity    Decimal       @db.Decimal(10, 2)
+  unit        String        @default("nos")
+  unitPrice   Decimal       @db.Decimal(12, 2)
+  amount      Decimal       @db.Decimal(12, 2)
+  sortOrder   Int           @default(0)
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  customerId String
+  jobId      String?
+  quoteId    String?
+  amount     Decimal       @db.Decimal(12, 2)
+  method     PaymentMethod @default(UPI)
+  reference  String?
+  paidAt     DateTime      @default(now())
+  createdAt  DateTime      @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  job      Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([paidAt])
+}
+
+model ReviewRequest {
+  id           String              @id @default(cuid())
+  customerId   String
+  jobId        String?             @unique
+  status       ReviewRequestStatus @default(PENDING)
+  channel      NotificationChannel @default(WHATSAPP)
+  scheduledFor DateTime
+  sentAt       DateTime?
+  clickedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime            @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  job      Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledFor])
+}
+
+model MessageTemplate {
+  id        String              @id @default(cuid())
+  code      String              @unique
+  name      String
+  channel   NotificationChannel
+  subject   String?
+  body      String
+  isActive  Boolean             @default(true)
+  updatedAt DateTime            @updatedAt
+  createdAt DateTime            @default(now())
+}
+
+model Notification {
+  id           String              @id @default(cuid())
+  channel      NotificationChannel
+  templateCode String?
+  recipient    String
+  subject      String?
+  body         String
+  payload      Json?
+  status       NotificationStatus  @default(QUEUED)
+  attempts     Int                 @default(0)
+  error        String?
+  relatedType  String?
+  relatedId    String?
+  actorId      String?
+  sentAt       DateTime?
+  createdAt    DateTime            @default(now())
+
+  queuedBy User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PortfolioProject {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  description String
+  materials   String?
+  serviceId   String
+  areaId      String?
+  completedOn DateTime?
+  isPublished Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  service Service          @relation(fields: [serviceId], references: [id])
+  area    ServiceArea?     @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  photos  PortfolioPhoto[]
+
+  @@index([isPublished])
+}
+
+model PortfolioPhoto {
+  id         String     @id @default(cuid())
+  projectId  String
+  stage      PhotoStage
+  storageKey String
+  caption    String?
+  sortOrder  Int        @default(0)
+
+  project PortfolioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  headline    String
+  subheadline String?
+  body        String?
+  serviceId   String?
+  areaId      String?
+  utmCampaign String?
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  service Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  area    ServiceArea? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  @@index([isActive])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  meta       Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  name      String
+  path      String?
+  sessionId String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([name])
+  @@index([createdAt])
+}

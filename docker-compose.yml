@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flowcraft
+      POSTGRES_PASSWORD: flowcraft
+      POSTGRES_DB: flowcraft
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowcraft"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://flowcraft:flowcraft@db:5432/flowcraft?schema=public
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/app/.data
+
+volumes:
+  pgdata:
+  uploads:
