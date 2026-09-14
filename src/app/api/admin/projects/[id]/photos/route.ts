@@ -4,6 +4,7 @@ import { badRequest } from "@/lib/errors";
 import { withApi } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/server/audit";
+import { refreshProjectPages } from "@/server/revalidate";
 import {
   IMAGE_MIME_TYPES,
   newStorageKey,
@@ -24,7 +25,7 @@ export const POST = withApi<RouteCtx>(
   async ({ req, user, ip }, ctx) => {
     const id = (await ctx.params).id;
 
-    const project = await prisma.portfolioProject.findUnique({ where: { id }, select: { id: true } });
+    const project = await prisma.portfolioProject.findUnique({ where: { id }, select: { id: true, slug: true } });
     if (!project) throw notFound("Project not found");
 
     const form = await req.formData().catch(() => null);
@@ -70,6 +71,8 @@ export const POST = withApi<RouteCtx>(
       meta: { photoId: photo.id, stage, sizeBytes: stored.sizeBytes },
       ip,
     });
+
+    refreshProjectPages(project.slug);
 
     return NextResponse.json({ id: photo.id }, { status: 201 });
   },

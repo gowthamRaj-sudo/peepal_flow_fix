@@ -4,6 +4,7 @@ import { withApi } from "@/lib/api";
 import { notFound } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/server/audit";
+import { refreshProjectPages } from "@/server/revalidate";
 import { storage } from "@/services/storage";
 
 export const runtime = "nodejs";
@@ -29,7 +30,10 @@ export const PATCH = withApi<RouteCtx>(
     const id = (await ctx.params).id;
     const body = updateSchema.parse(await req.json());
 
-    const existing = await prisma.portfolioProject.findUnique({ where: { id }, select: { id: true } });
+    const existing = await prisma.portfolioProject.findUnique({
+      where: { id },
+      select: { id: true, slug: true },
+    });
     if (!existing) throw notFound("Project not found");
 
     if (body.slug) {
@@ -67,6 +71,8 @@ export const PATCH = withApi<RouteCtx>(
       ip,
     });
 
+    refreshProjectPages(existing.slug, project.slug);
+
     return NextResponse.json({ ok: true, slug: project.slug });
   },
   { roles: ["ADMIN", "STAFF"], csrf: false },
@@ -96,6 +102,8 @@ export const DELETE = withApi<RouteCtx>(
       meta: { slug: project.slug, photos: project.photos.length },
       ip,
     });
+
+    refreshProjectPages(project.slug);
 
     return NextResponse.json({ ok: true });
   },

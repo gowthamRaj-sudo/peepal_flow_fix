@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withApi } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/server/audit";
+import { refreshProjectPages } from "@/server/revalidate";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,8 @@ export const POST = withApi(
       meta: { slug: project.slug, title: body.title },
       ip,
     });
+
+    refreshProjectPages(undefined, project.slug);
 
     return NextResponse.json({ id: project.id, slug: project.slug }, { status: 201 });
   },

@@ -4,6 +4,7 @@ import { notFound } from "@/lib/errors";
 import { withApi } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/server/audit";
+import { refreshProjectPages } from "@/server/revalidate";
 import { storage } from "@/services/storage";
 import { PhotoStage } from "@prisma/client";
 
@@ -45,6 +46,9 @@ export const PATCH = withApi<RouteCtx>(
       },
     });
 
+    const project = await prisma.portfolioProject.findUnique({ where: { id }, select: { slug: true } });
+    if (project) refreshProjectPages(project.slug);
+
     await audit({
       actorId: user!.id,
       action: "portfolio.photo_updated",
@@ -72,6 +76,9 @@ export const DELETE = withApi<RouteCtx>(
 
     await prisma.portfolioPhoto.delete({ where: { id: photoId } });
     await storage().delete(photo.storageKey).catch(() => {});
+
+    const project = await prisma.portfolioProject.findUnique({ where: { id }, select: { slug: true } });
+    if (project) refreshProjectPages(project.slug);
 
     await audit({
       actorId: user!.id,
