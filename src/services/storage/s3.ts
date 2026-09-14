@@ -17,6 +17,8 @@ function s3(): S3Client {
     }
     client = new S3Client({
       region: env.S3_REGION,
+      endpoint: env.S3_ENDPOINT || undefined,
+      forcePathStyle: Boolean(env.S3_ENDPOINT),
       credentials: env.AWS_ACCESS_KEY_ID
         ? {
             accessKeyId: env.AWS_ACCESS_KEY_ID,
@@ -43,7 +45,6 @@ export class S3Driver implements StorageDriver {
         Key: key,
         Body: data,
         ContentType: mimeType,
-        ServerSideEncryption: "AES256",
       }),
     );
     return { key, sizeBytes: data.byteLength, mimeType };
